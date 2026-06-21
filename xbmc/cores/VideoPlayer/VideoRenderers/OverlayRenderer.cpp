@@ -657,7 +657,17 @@ std::shared_ptr<COverlay> CRenderer::Convert(SElement& e)
   }
 
   if (o.IsOverlayType(DVDOVERLAY_TYPE_IMAGE))
+  {
     r = COverlay::Create(static_cast<CDVDOverlayImage&>(o), m_rs);
+    if (r)
+    {
+      // Mark as PGS bitmap subtitle and propagate the Blu-ray 3D depth plane so
+      // GetStereoscopicDepth() can apply both the user-configured depth offset
+      // and the per-subtitle depth from the BD stream.
+      r->m_pgsSubtitle = true;
+      r->m_3dSubtitleDepth = o.m_3dSubtitleDepth;
+    }
+  }
   else if (o.IsOverlayType(DVDOVERLAY_TYPE_SPU))
     r = COverlay::Create(static_cast<CDVDOverlaySpu&>(o));
 

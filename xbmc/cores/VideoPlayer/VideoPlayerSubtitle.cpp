@@ -69,9 +69,15 @@ void CVideoPlayerSubtitle::SendMessage(std::shared_ptr<CDVDMsg> pMsg, int priori
       {
         if (std::shared_ptr<CDVDOverlay> overlay{m_pOverlayCodec->GetOverlay()}; overlay != nullptr)
         {
+          // Propagate the Blu-ray 3D subtitle depth plane to the overlay so the
+          // renderer can apply the correct stereoscopic depth offset.
+          if (m_streaminfo.codec == AV_CODEC_ID_HDMV_PGS_SUBTITLE)
+            overlay->m_3dSubtitleDepth = m_streaminfo.m_3dSubtitlePlane;
           auto group{InitialiseNewOverlayGroup(overlay)};
           while ((overlay = m_pOverlayCodec->GetOverlay()) != nullptr)
           {
+            if (m_streaminfo.codec == AV_CODEC_ID_HDMV_PGS_SUBTITLE)
+              overlay->m_3dSubtitleDepth = m_streaminfo.m_3dSubtitlePlane;
             if (*group->m_overlays.back() == *overlay)
               group->m_overlays.emplace_back(overlay);
             else
