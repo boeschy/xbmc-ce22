@@ -38,6 +38,8 @@ public:
     m_enableTextAlign = false;
     m_overlayContainerFlushable = true;
     m_setForcedMargins = false;
+    m_isBitmapSubtitle = false;
+    m_isPgsSubtitle = false;
   }
 
   CDVDOverlay(const CDVDOverlay& src) : std::enable_shared_from_this<CDVDOverlay>(src)
@@ -49,9 +51,12 @@ public:
     replace = src.replace;
     m_textureid = 0;
     m_3dSubtitleDepth = 0;
+    m_3dSubtitleDepthAuthored = false;
     m_enableTextAlign = src.m_enableTextAlign;
     m_overlayContainerFlushable = src.m_overlayContainerFlushable;
     m_setForcedMargins = src.m_setForcedMargins;
+    m_isBitmapSubtitle = src.m_isBitmapSubtitle;
+    m_isPgsSubtitle = src.m_isPgsSubtitle;
   }
 
   virtual ~CDVDOverlay() = default;
@@ -106,6 +111,24 @@ public:
    */
   bool IsForcedMargins() const { return m_setForcedMargins; }
 
+  /*
+   * \brief Mark the overlay as a bitmap subtitle, i.e. a picture of text
+   * belonging to a subtitle track. Menu graphics (Blu-ray IG/PG menus, DVD
+   * button highlights) share the same overlay classes but are not subtitles
+   * and must never be moved or resized by the subtitle settings.
+   */
+  void SetBitmapSubtitle(bool isBitmapSubtitle) { m_isBitmapSubtitle = isBitmapSubtitle; }
+
+  /*
+   * \brief Return true if the overlay is a bitmap subtitle, false for menu
+   * graphics and anything else drawn through the same overlay classes.
+   */
+  bool IsBitmapSubtitle() const { return m_isBitmapSubtitle; }
+
+  /* Narrower than IsBitmapSubtitle(): only PG carries authored MVC depth. */
+  void SetPgsSubtitle(bool isPgsSubtitle) { m_isPgsSubtitle = isPgsSubtitle; }
+  bool IsPgsSubtitle() const { return m_isPgsSubtitle; }
+
   double iPTSStartTime;
   double iPTSStopTime;
   bool bForced; // display, no matter what
@@ -113,11 +136,14 @@ public:
   unsigned long m_textureid;
 
   int m_3dSubtitleDepth;
+  bool m_3dSubtitleDepthAuthored;
 protected:
   DVDOverlayType m_type;
   bool m_enableTextAlign;
   bool m_overlayContainerFlushable;
   bool m_setForcedMargins;
+  bool m_isBitmapSubtitle;
+  bool m_isPgsSubtitle;
 };
 
 using VecOverlays = std::vector<std::shared_ptr<CDVDOverlay>>;
