@@ -22,6 +22,14 @@ enum DVDOverlayType
   DVDOVERLAY_TYPE_GROUP   = 5,
 };
 
+//! Where an overlay came from. Subtitles and a disc menu share one container, and only an
+//! overlay from the same source ends or replaces another.
+enum class DVDOverlaySource
+{
+  SUBTITLE,
+  MENU,
+};
+
 class CDVDOverlay : public std::enable_shared_from_this<CDVDOverlay>
 {
 public:
@@ -40,6 +48,7 @@ public:
     m_setForcedMargins = false;
     m_isBitmapSubtitle = false;
     m_isPgsSubtitle = false;
+    m_source = DVDOverlaySource::SUBTITLE;
   }
 
   CDVDOverlay(const CDVDOverlay& src) : std::enable_shared_from_this<CDVDOverlay>(src)
@@ -57,6 +66,7 @@ public:
     m_setForcedMargins = src.m_setForcedMargins;
     m_isBitmapSubtitle = src.m_isBitmapSubtitle;
     m_isPgsSubtitle = src.m_isPgsSubtitle;
+    m_source = src.m_source;
   }
 
   virtual ~CDVDOverlay() = default;
@@ -67,7 +77,8 @@ public:
     return std::abs(iPTSStartTime - other.iPTSStartTime) < epsilon &&
            std::abs(iPTSStopTime - other.iPTSStopTime) < epsilon && bForced == other.bForced &&
            replace == other.replace &&
-           m_overlayContainerFlushable == other.m_overlayContainerFlushable;
+           m_overlayContainerFlushable == other.m_overlayContainerFlushable &&
+           m_source == other.m_source;
   }
 
   bool IsOverlayType(DVDOverlayType type) const { return (m_type == type); }
@@ -100,6 +111,17 @@ public:
    * \brief Return true when the overlay container can flush the overlay on flush events.
    */
   bool IsOverlayContainerFlushable() const { return m_overlayContainerFlushable; }
+
+  /*
+   * \brief Say where the overlay came from: a subtitle stream unless told otherwise.
+   */
+  void SetSource(DVDOverlaySource source) { m_source = source; }
+
+  /*
+   * \brief Where the overlay came from. Only an overlay from the same source ends or
+   *        replaces this one.
+   */
+  DVDOverlaySource GetSource() const { return m_source; }
 
   /*
    * \brief Specify if the margins are handled by the subtitle codec/parser.
@@ -144,6 +166,7 @@ protected:
   bool m_setForcedMargins;
   bool m_isBitmapSubtitle;
   bool m_isPgsSubtitle;
+  DVDOverlaySource m_source;
 };
 
 using VecOverlays = std::vector<std::shared_ptr<CDVDOverlay>>;
