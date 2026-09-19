@@ -13,6 +13,7 @@
 #include "utils/GlobalsHandling.h"
 #include "utils/StreamDetails.h"
 #include "WinSystemAmlogic.h"
+#include "windowing/Resolution.h"
 
 namespace KODI
 {
@@ -59,6 +60,7 @@ protected:
 private:
   std::unique_ptr<CEGLContextUtils> m_pGLContext;
   StreamHdrType m_hdrType = StreamHdrType::HDR_TYPE_NONE;
+  RESOLUTION_INFO m_lastAppliedResolution;
 };
 
 }
