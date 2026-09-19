@@ -93,6 +93,8 @@ using namespace std::chrono_literals;
 
 namespace
 {
+using TimedGuiAction = std::pair<CAction, std::chrono::steady_clock::time_point>;
+
 bool IsKnownLanguage(const CLanguageTag& language)
 {
   return !language.IsUndetermined();
@@ -3685,7 +3687,16 @@ void CVideoPlayer::HandleMessages()
       }
     }
     else if (pMsg->IsType(CDVDMsg::GENERAL_GUI_ACTION))
-      OnAction(std::static_pointer_cast<CDVDMsgType<CAction>>(pMsg)->m_value);
+    {
+      const auto& queued = std::static_pointer_cast<CDVDMsgType<TimedGuiAction>>(pMsg)->m_value;
+      const auto started = std::chrono::steady_clock::now();
+      CLog::Log(LOGINFO, "BDJINPUT dispatch action={} queue_ms={}", queued.first.GetID(),
+                std::chrono::duration_cast<std::chrono::milliseconds>(started - queued.second).count());
+      const bool handled = OnAction(queued.first);
+      CLog::Log(LOGINFO, "BDJINPUT done action={} handled={} dispatch_ms={}",
+                queued.first.GetID(), handled,
+                std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - started).count());
+    }
     else if (pMsg->IsType(CDVDMsg::PLAYER_STARTED))
     {
       SStartMsg& msg = std::static_pointer_cast<CDVDMsgType<SStartMsg>>(pMsg)->m_value;
@@ -5160,8 +5171,10 @@ bool CVideoPlayer::OnAction(const CAction &action)
   { \
     if (!IsCurrentThread()) \
     { \
+      CLog::Log(LOGINFO, "BDJINPUT enqueue action={}", action.GetID()); \
       m_messenger.Put( \
-          std::make_shared<CDVDMsgType<CAction>>(CDVDMsg::GENERAL_GUI_ACTION, action)); \
+          std::make_shared<CDVDMsgType<TimedGuiAction>>(CDVDMsg::GENERAL_GUI_ACTION, \
+              TimedGuiAction{action, std::chrono::steady_clock::now()})); \
       return true; \
     } \
   } while (false)

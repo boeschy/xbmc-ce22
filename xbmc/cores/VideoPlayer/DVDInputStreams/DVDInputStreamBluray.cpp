@@ -1432,7 +1432,13 @@ void CDVDInputStreamBluray::UserInput(bd_vk_key_e vk)
   if(m_bd == nullptr || !m_navmode)
     return;
 
+  CLog::Log(LOGINFO, "BDJINPUT native begin key={}", static_cast<int>(vk));
+  const auto started = std::chrono::steady_clock::now();
   int ret = bd_user_input(m_bd, -1, vk);
+  const auto returned = std::chrono::steady_clock::now();
+  CLog::Log(LOGINFO, "BDJINPUT native returned key={} ret={} native_ms={}",
+            static_cast<int>(vk), ret,
+            std::chrono::duration_cast<std::chrono::milliseconds>(returned - started).count());
   if (ret < 0)
   {
     CLog::Log(LOGDEBUG, "CDVDInputStreamBluray::UserInput - user input failed");
@@ -1443,6 +1449,9 @@ void CDVDInputStreamBluray::UserInput(bd_vk_key_e vk)
     while (bd_get_event(m_bd, &m_event))
       ProcessEvent();
   }
+  CLog::Log(LOGINFO, "BDJINPUT events done key={} events_ms={}",
+            static_cast<int>(vk),
+            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - returned).count());
 }
 
 bool CDVDInputStreamBluray::MouseMove(const CPoint &point)
