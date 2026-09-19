@@ -326,7 +326,7 @@ bool CDVDInputStreamBluray::Open()
   URIUtils::RemoveSlashAtEnd(root);
 
   bd_set_debug_handler(CBlurayCallback::bluray_logger);
-  bd_set_debug_mask(DBG_CRIT | DBG_BLURAY | DBG_NAV);
+  bd_set_debug_mask(DBG_CRIT | DBG_BLURAY | DBG_NAV | DBG_BDJ);
 
   m_bd = bd_init();
 

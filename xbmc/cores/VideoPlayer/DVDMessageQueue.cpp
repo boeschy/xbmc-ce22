@@ -174,7 +174,9 @@ MsgQueueReturnCode CDVDMessageQueue::Get(std::shared_ptr<CDVDMsg>& pMsg,
 
   while (!m_bAbortRequest)
   {
-    std::list<DVDMessageListItem> &msgs = (priority > 0 || !m_prioMessages.empty()) ? m_prioMessages : m_messages;
+    std::list<DVDMessageListItem>& msgs =
+        (!m_prioMessages.empty() || (priority > 0 && !m_drain)) ? m_prioMessages
+                                                             : m_messages;
 
     if (!msgs.empty() && (msgs.back().priority >= priority || m_drain))
     {

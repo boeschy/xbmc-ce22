@@ -2631,6 +2631,9 @@ void CAMLCodec::Reset()
 
 bool CAMLCodec::AddData(uint8_t *pData, size_t iSize, double dts, double pts)
 {
+  if (iSize == 0)
+    return true;
+
   int data_len, free_len, size;
   int chunk_size = calc_chunk_size(iSize);
   float new_buffer_level = GetBufferLevel(chunk_size, data_len, free_len, size);

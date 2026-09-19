@@ -1718,6 +1718,7 @@ void CVideoPlayer::Process()
   CServiceBroker::GetWinSystem()->RegisterRenderLoop(this);
 
   Prepare();
+  std::weak_ptr<CDVDInputStream> pendingStreamOpen;
 
   while (!m_bAbortRequest)
   {
@@ -1736,6 +1737,9 @@ void CVideoPlayer::Process()
 
     if (m_bAbortRequest)
       break;
+
+    if (!m_pDemuxer || pendingStreamOpen.lock() != m_pInputStream)
+      pendingStreamOpen.reset();
 
     // should we open a new input stream?
     if (!m_pInputStream)
@@ -1827,7 +1831,8 @@ void CVideoPlayer::Process()
 
     DemuxPacket* pPacket = NULL;
     CDemuxStream *pStream = NULL;
-    ReadPacket(pPacket, pStream);
+    if (pendingStreamOpen.expired())
+      ReadPacket(pPacket, pStream);
     if (pPacket && !pStream)
     {
       /* probably a empty packet, just free it and move on */
@@ -1865,12 +1870,27 @@ void CVideoPlayer::Process()
       }
 
       // if there is another stream available, reopen demuxer
-      CDVDInputStream::ENextStream next = m_pInputStream->NextStream();
+      const auto next = pendingStreamOpen.expired()
+                            ? m_pInputStream->NextStream()
+                            : CDVDInputStream::NEXTSTREAM_OPEN;
       if(next == CDVDInputStream::NEXTSTREAM_OPEN)
       {
+        SetCaching(CACHESTATE_DONE);
+        if (m_pInputStream->IsStreamType(DVDSTREAM_TYPE_BLURAY) &&
+            m_playSpeed == DVD_PLAYSPEED_NORMAL &&
+            ((m_CurrentAudio.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+              m_VideoPlayerAudio->HasData()) ||
+             (m_CurrentVideo.syncState == IDVDStreamPlayer::SYNC_INSYNC &&
+              m_VideoPlayerVideo->HasData())))
+        {
+          pendingStreamOpen = m_pInputStream;
+          CThread::Sleep(10ms);
+          continue;
+        }
+
+        pendingStreamOpen.reset();
         CloseDemuxer();
 
-        SetCaching(CACHESTATE_DONE);
         CLog::Log(LOGINFO, "VideoPlayer: next stream, wait for old streams to be finished");
         CloseStream(m_CurrentAudio, true);
         CloseStream(m_CurrentVideo, true);
