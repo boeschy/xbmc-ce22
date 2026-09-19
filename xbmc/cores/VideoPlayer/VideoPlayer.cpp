@@ -962,17 +962,28 @@ bool CVideoPlayer::OpenDemuxStream()
   CLog::Log(LOGINFO, "Creating Demuxer");
 
   int attempts = 10;
-  while (!m_bStop && attempts-- > 0)
+  while (!m_bStop && !m_bAbortRequest && attempts-- > 0)
   {
     m_pDemuxer.reset(CDVDFactoryDemuxer::CreateDemuxer(m_pInputStream));
     if(!m_pDemuxer && m_pInputStream->IsStreamType(DVDSTREAM_TYPE_PVRMANAGER))
     {
       continue;
     }
-    else if(!m_pDemuxer && m_pInputStream->NextStream() != CDVDInputStream::NEXTSTREAM_NONE)
+    else if (!m_pDemuxer)
     {
-      CLog::Log(LOGDEBUG, "{} - New stream available from input, retry open", __FUNCTION__);
-      continue;
+      const auto next = m_pInputStream->NextStream();
+      if (next == CDVDInputStream::NEXTSTREAM_RETRY)
+      {
+        ++attempts;
+        HandleMessages();
+        CThread::Sleep(100ms);
+        continue;
+      }
+      if (next == CDVDInputStream::NEXTSTREAM_OPEN)
+      {
+        CLog::Log(LOGDEBUG, "{} - New stream available from input, retry open", __FUNCTION__);
+        continue;
+      }
     }
     break;
   }

@@ -34,6 +34,8 @@ static int mvc_file_read(void *h, uint8_t* buf, int size)
 {
   CDVDInputStream* pInputStream = static_cast<CDemuxMVC*>(h)->m_pInput;
   int s = pInputStream->Read(buf, size);
+  if (s > 0)
+    return s;
 
   if (pInputStream->IsEOF()) {
 	  return AVERROR_EOF;
@@ -171,7 +173,7 @@ DemuxPacket* CDemuxMVC::Read()
 
     if (ret == AVERROR(EINTR) || ret == AVERROR(EAGAIN))
       continue;
-    else if (ret == AVERROR_EOF)
+    else if (ret < 0)
       break;
     else if (pkt->size <= 0 || pkt->stream_index != m_nStreamIndex)
     {

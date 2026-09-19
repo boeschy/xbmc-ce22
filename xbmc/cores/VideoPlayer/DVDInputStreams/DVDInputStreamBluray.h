@@ -193,7 +193,7 @@ public:
 
   void ProcessEvent();
   CDVDDemux* GetExtentionDemux() override { return m_pMVCDemux; };
-  bool HasExtention() override { return m_bMVCPlayback; }
+  bool HasExtention() override { return m_bMVCPlayback && m_pMVCDemux != nullptr; }
   bool AreEyesFlipped() override { return m_bFlipEyes; }
   void DisableExtention() override;
   bool OpenNextStream() override;

@@ -797,7 +797,7 @@ void CDVDInputStreamBluray::ProcessEvent() {
     && m_clip < m_titleInfo->clips + m_titleInfo->clip_count
     && m_nMVCClip != m_clip
     && (m_clipQueue.empty()
-      || m_clip != m_titleInfo->clips + m_clipQueue.front()))
+      || m_clip != m_titleInfo->clips + m_clipQueue.back()))
   {
     m_clipQueue.push(m_clip - m_titleInfo->clips);
     if (m_pMVCDemux == NULL)
@@ -837,6 +837,11 @@ int CDVDInputStreamBluray::Read(uint8_t* buf, int buf_size)
 
       /* Check for holding events */
       switch(m_event.event) {
+        case BD_EVENT_IDLE:
+          if (result == 0)
+            return 0;
+          break;
+
         case BD_EVENT_SEEK:
         case BD_EVENT_TITLE:
         case BD_EVENT_ANGLE:
@@ -1402,6 +1407,12 @@ CDVDInputStream::ENextStream CDVDInputStreamBluray::NextStream()
   if(!m_navmode || m_hold == HOLD_EXIT || m_hold == HOLD_ERROR)
     return NEXTSTREAM_NONE;
 
+  if (m_event.event == BD_EVENT_IDLE)
+  {
+    ProcessEvent();
+    return NEXTSTREAM_RETRY;
+  }
+
   /* process any current event */
   ProcessEvent();
 
@@ -1551,11 +1562,15 @@ MenuType CDVDInputStreamBluray::GetSupportedMenuType()
 
 bool CDVDInputStreamBluray::ProcessItem(int playitem)
 {
+  m_bMVCPlayback = false;
+  m_bFlipEyes = false;
+  m_nMVCSubPathIndex = 0;
+  EMPTY_QUEUE(m_clipQueue);
   FreeTitleInfo();
 
   m_titleInfo = bd_get_playlist_info(m_bd, playitem, m_angle);
 
-  if (!m_bMVCDisabled)
+  if (!m_bMVCDisabled && m_titleInfo)
   {
     MPLS_PL * mpls = bd_get_title_mpls(m_bd);
     if (mpls)
@@ -1636,7 +1651,13 @@ bool CDVDInputStreamBluray::OpenNextStream()
 bool CDVDInputStreamBluray::OpenMVCDemux(int playItem)
 {
   MPLS_PL *pl = bd_get_title_mpls(m_bd);
-  if (!pl)
+  if (!m_bMVCPlayback || !m_titleInfo || playItem < 0 ||
+      static_cast<uint32_t>(playItem) >= m_titleInfo->clip_count || !pl ||
+      m_nMVCSubPathIndex < 0 || m_nMVCSubPathIndex >= pl->ext_sub_count ||
+      !pl->ext_sub_path ||
+      playItem >= pl->ext_sub_path[m_nMVCSubPathIndex].sub_playitem_count ||
+      !pl->ext_sub_path[m_nMVCSubPathIndex].sub_play_item ||
+      !pl->ext_sub_path[m_nMVCSubPathIndex].sub_play_item[playItem].clip)
     return false;
 
   std::string strFileName;
